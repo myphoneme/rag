@@ -47,17 +47,20 @@ async def upload_documents(files: list[UploadFile] = File(...)) -> dict:
     try:
         uploads = []
         for file in files:
+            content = await file.read()
             uploads.append(
                 {
                     "filename": file.filename or "upload",
-                    "content": await file.read(),
+                    "content": content,
                 }
             )
         documents = get_service().upload_files(uploads)
         return {"documents": documents, "message": f"Indexed {len(documents)} file(s)."}
     except ValueError as exc:
+        print(f"Upload ValueError: {exc}")
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except RuntimeError as exc:
+    except Exception as exc:
+        print(f"Upload Unexpected Error: {exc}")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
