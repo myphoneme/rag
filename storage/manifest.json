@@ -292,6 +292,27 @@
         "67a668f4857443c8917e01172013410f:10",
         "67a668f4857443c8917e01172013410f:11"
       ]
+    },
+    {
+      "id": "2669d12c3c994ec98a7e4e53be9c9c2c",
+      "name": "Digital_All_Syllabus .pdf",
+      "extension": ".pdf",
+      "size_bytes": 305695,
+      "chunk_count": 10,
+      "uploaded_at": "2026-04-08T06:54:41.074649+00:00",
+      "stored_name": "2669d12c3c994ec98a7e4e53be9c9c2c-Digital_All_Syllabus-.pdf",
+      "chunk_ids": [
+        "2669d12c3c994ec98a7e4e53be9c9c2c:0",
+        "2669d12c3c994ec98a7e4e53be9c9c2c:1",
+        "2669d12c3c994ec98a7e4e53be9c9c2c:2",
+        "2669d12c3c994ec98a7e4e53be9c9c2c:3",
+        "2669d12c3c994ec98a7e4e53be9c9c2c:4",
+        "2669d12c3c994ec98a7e4e53be9c9c2c:5",
+        "2669d12c3c994ec98a7e4e53be9c9c2c:6",
+        "2669d12c3c994ec98a7e4e53be9c9c2c:7",
+        "2669d12c3c994ec98a7e4e53be9c9c2c:8",
+        "2669d12c3c994ec98a7e4e53be9c9c2c:9"
+      ]
     }
   ]
 }
