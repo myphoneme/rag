@@ -45,10 +45,11 @@ async def login(request: LoginRequest):
 
     if user:
         return {
-            "status": "success",
-            "email": user["email"],
-            "role": user["role"]
-        }
+    "status": "success",
+    "email": user["email"],
+    "role": user["role"],
+    "name": user["name"]
+}
 
     raise HTTPException(status_code=401, detail="Invalid email or password")
 
@@ -89,24 +90,17 @@ from pydantic import BaseModel
 
 class ChangePasswordRequest(BaseModel):
     email: str
-    old_password: str
     new_password: str
 
 @app.put("/api/change-password")
 async def change_password(request: ChangePasswordRequest):
     conn = get_db_connection()
 
-    user = conn.execute(
-        "SELECT * FROM users WHERE email=?",
-        (request.email,)
-    ).fetchone()
-
-    if not user or not pwd_context.verify(request.old_password, user["hashed_password"]):
-        raise HTTPException(status_code=400, detail="Invalid old password")
-
+    # 🔑 hash new password
     new_hashed = pwd_context.hash(request.new_password)
 
-    conn.execute(
+    # 🔄 update in DB
+    cursor = conn.execute(
         "UPDATE users SET hashed_password=? WHERE email=?",
         (new_hashed, request.email)
     )
@@ -114,7 +108,10 @@ async def change_password(request: ChangePasswordRequest):
     conn.commit()
     conn.close()
 
-    return {"message": "Password updated successfully"}
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {"status": "success", "message": "Password updated successfully"}
     conn = get_db_connection()
 
     user = conn.execute(
@@ -191,7 +188,59 @@ def chat(request: ChatRequest) -> dict:
 @app.get("/api/admin/users")
 def get_users():
     conn = get_db_connection()
-    users = conn.execute("SELECT email, role FROM users").fetchall()
+
+    users = conn.execute(
+        "SELECT name, email, role FROM users"
+    ).fetchall()
+
     conn.close()
 
     return [dict(u) for u in users]
+class UpdateProfileRequest(BaseModel):
+    email: str
+    name: str
+
+@app.put("/api/update-profile")
+async def update_profile(request: UpdateProfileRequest):
+    conn = get_db_connection()
+
+    cursor = conn.execute(
+        "UPDATE users SET name=? WHERE email=?",
+        (request.name, request.email)
+    )
+
+    conn.commit()
+    conn.close()
+
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {"status": "success", "message": "Profile updated successfully"}
+class UpdateUserRequest(BaseModel):
+    email: str
+    name: str
+    password: str
+    role: str
+
+
+@app.put("/api/admin/update-user")
+async def admin_update_user(request: UpdateUserRequest):
+    conn = get_db_connection()
+
+    if request.password:
+        new_hashed = pwd_context.hash(request.password)
+
+        conn.execute(
+            "UPDATE users SET name=?, hashed_password=?, role=? WHERE email=?",
+            (request.name, new_hashed, request.role, request.email)
+        )
+    else:
+        conn.execute(
+            "UPDATE users SET name=?, role=? WHERE email=?",
+            (request.name, request.role, request.email)
+        )
+
+    conn.commit()
+    conn.close()
+
+    return {"status": "success", "message": "User updated successfully"}

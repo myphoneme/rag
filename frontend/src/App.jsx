@@ -9,7 +9,12 @@ import {
   uploadDocuments,
   loginUser,
   getUsers,
+  updatePassword,
+  updateProfile,
+  updateUser,
 } from "./api";
+import { RiDeleteBin3Fill } from "react-icons/ri";
+import { MdModeEdit } from "react-icons/md";
 
 const ACCEPTED_TYPES = ".pdf,.docx,.txt,.md,.csv,.xlsx";
 const inputStyle = {
@@ -17,9 +22,9 @@ const inputStyle = {
   padding: "12px",
   marginTop: "6px",
   borderRadius: "10px",
-  border: "1px solid #2A2F3A",
-  background: "#0B0F19",
-  color: "#E5E7EB",
+  border: "1px solid var(--border)",
+  background: "var(--bg-main)",
+  color: "var(--text-main)",
   fontSize: "14px",
   outline: "none"
 };
@@ -68,7 +73,7 @@ function formatDate(value) {
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [role, setRole] = useState(localStorage.getItem("userRole"));
+  const [role, setRole] = useState("");
 const isAdmin = role === "admin";
 
   // --- HE ITHE ADD KARA (Juna loginData ani handleLogin replace kara) ---
@@ -80,23 +85,19 @@ const isAdmin = role === "admin";
 
   const handleLogin = async (e) => {
   e.preventDefault();
-  setAuthError(""); 
+  setAuthError("");
+
   try {
     const res = await loginUser(loginData.email, loginData.password);
 
     if (res.status === "success") {
       setIsAuthenticated(true);
 
-      // ✅ ADD THIS LINE
       localStorage.setItem("userEmail", res.email);
-      if (res.status === "success") {
-  setIsAuthenticated(true);
+      localStorage.setItem("userRole", res.role);
+      localStorage.setItem("userName", res.name);
 
-  localStorage.setItem("userEmail", res.email);
-  localStorage.setItem("userRole", res.role);
-
-  setRole(res.role);   // 🔥 THIS LINE FIXES YOUR PROBLEM
-}   // 🔥 IMPORTANT
+      setRole(res.role);
     }
   } catch (err) {
     setAuthError(err.message);
@@ -111,6 +112,9 @@ const isAdmin = role === "admin";
   const [search, setSearch] = useState("");
   const [deleteEmail, setDeleteEmail] = useState("");
   const [activeView, setActiveView] = useState("upload");
+  const activeNavigation = navigationItems.find(
+  (item) => item.id === activeView
+);
   const [theme, setTheme] = useState("dark");
   const [isUploading, setIsUploading] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -122,8 +126,8 @@ const isAdmin = role === "admin";
   const fileInputRef = useRef(null);
   const chatViewportRef = useRef(null);
   const [showMenu, setShowMenu] = useState(false);
-const [showProfile, setShowProfile] = useState(false);
-const [newUser, setNewUser] = useState({
+  const [showProfile, setShowProfile] = useState(false);
+  const [newUser, setNewUser] = useState({
   email: "",
   password: ""
 });
@@ -138,11 +142,28 @@ const [inviteData, setInviteData] = useState({
 });
 
 const [users, setUsers] = useState([]);
+const [showEditModal, setShowEditModal] = useState(false);
+
+const [editUser, setEditUser] = useState({
+  name: "",
+  email: "",
+  password: "",
+  role: "user"
+});
 const [profileData, setProfileData] = useState({
+  name: localStorage.getItem("userName") || "",
   newPassword: "",
   confirmPassword: ""
 });
+useEffect(() => {
+  const savedEmail = localStorage.getItem("userEmail");
+  const savedRole = localStorage.getItem("userRole");
 
+  if (savedEmail && savedRole) {
+    setIsAuthenticated(true);
+    setRole(savedRole);
+  }
+}, []);
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 5000);
@@ -273,9 +294,16 @@ const [profileData, setProfileData] = useState({
     }
   }
 
-  const activeNavigation = navigationItems.find(n => n.id === activeView);
   const email = localStorage.getItem("userEmail");
-  const initials = "AS";
+const username = email?.split("@")[0];
+
+const userName = localStorage.getItem("userName") || "";
+const initials = userName
+  .split(" ")
+  .map(word => word[0])
+  .join("")
+  .toUpperCase()
+  .slice(0, 2);
   
 return (
     <div className="app-shell" data-theme={theme}>
@@ -352,13 +380,28 @@ return (
 
   {/* Role Dropdown */}
   <div style={{ textAlign: 'left' }}>
-    <label style={{ color: '#666', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block' }}>Login As</label>
+  
     
   </div>
 
-  <button type="submit" className="btn-primary" style={{ width: '100%', padding: '0.9rem', borderRadius: '0.75rem', background: '#5D5FEF', color: 'white', fontWeight: '700', border: 'none', cursor: 'pointer' }}>
-    Sign In
-  </button>
+  <button
+  type="submit"
+  className="btn-primary"
+  style={{
+    width: "180px",
+    padding: "0.9rem",
+    borderRadius: "0.75rem",
+    background: "#5D5FEF",
+    color: "white",
+    fontWeight: "700",
+    border: "none",
+    cursor: "pointer",
+    display: "block",
+    margin: "0 auto"
+  }}
+>
+  Login
+</button>
 </form></div>
         </div>
       ) : (
@@ -404,36 +447,93 @@ return (
   >
     {email?.charAt(0).toUpperCase()}
   </div>
+{showMenu && (
+  <div style={{
+    position: 'absolute',
+    bottom: '50px',
+    left: '0',
+    width: '200px',
+    background: '#0F172A',
+    border: '1px solid #1F2937',
+    borderRadius: '12px',
+    boxShadow: '0 10px 25px rgba(0,0,0,0.4)',
+    overflow: 'hidden',
+    zIndex: 100
+  }}>
 
-  {showMenu && (
+    {/* USER INFO */}
     <div style={{
-      position: 'absolute',
-      bottom: '45px',
-      right: '0',
-      background: '#111',
-      border: '1px solid #333',
-      borderRadius: '8px',
-      padding: '10px'
+      padding: '12px',
+      borderBottom: '1px solid #1F2937'
     }}>
-      <button onClick={() => {
+      <p style={{ color: '#fff', fontSize: '13px', margin: 0 }}>
+        {email}
+      </p>
+      <p style={{ color: '#9CA3AF', fontSize: '11px', margin: 0 }}>
+        {role}
+      </p>
+    </div>
+
+    {/* PROFILE */}
+    <button
+      onClick={() => {
         setActiveView("profile");
         setShowMenu(false);
-      }}>
-        👤 Profile
-      </button>
+      }}
+      style={{
+        width: '100%',
+        padding: '10px',
+        background: 'transparent',
+        border: 'none',
+        color: '#E5E7EB',
+        textAlign: 'left',
+        cursor: 'pointer'
+      }}
+      onMouseEnter={(e) => e.target.style.background = '#1F2937'}
+      onMouseLeave={(e) => e.target.style.background = 'transparent'}
+    >
+      👤 Profile Settings
+    </button>
 
-      <button onClick={() => {
-        setIsAuthenticated(false);
-        localStorage.clear();
-      }}>
-        🚪 Logout
-      </button>
-    </div>
-  )}
+    {/* LOGOUT */}
+    <button
+      onClick={() => {
+  localStorage.removeItem("userEmail");
+localStorage.removeItem("userRole");
+
+setIsAuthenticated(false);
+setRole("");
+
+showNotification("Logged out successfully 👋", "success");
+}}
+      style={{
+        width: '100%',
+        padding: '10px',
+        background: 'transparent',
+        border: 'none',
+        color: '#EF4444',
+        textAlign: 'left',
+        cursor: 'pointer'
+      }}
+      onMouseEnter={(e) => e.target.style.background = 'rgba(239,68,68,0.1)'}
+      onMouseLeave={(e) => e.target.style.background = 'transparent'}
+    >
+      🚪 Logout
+    </button>
+
+  </div>
+)}
 </div>
                 <div style={{ overflow: 'hidden' }}>
-                  <p style={{ fontSize: '0.85rem', fontWeight: '700', color: '#fff', margin: 0 }}>
-  {email}
+                  <p
+  style={{
+    fontSize: "0.85rem",
+    fontWeight: "700",
+    color: "var(--text-main)",
+    margin: 0
+  }}
+>
+  {localStorage.getItem("userName")}
 </p>
                   
                 </div>
@@ -486,7 +586,7 @@ return (
                   {error}
                 </div>
               )}{activeView === "admin" && isAdmin ? (
-  <div style={{ padding: "30px", color: "#fff" }}>
+  <div style={{ padding: "30px", color: "var(--text-main)" }}>
     
     {/* HEADER */}
     <div style={{
@@ -508,117 +608,217 @@ return (
           cursor: "pointer"
         }}
       >
-        ➕ Invite User
+        ➕ Add User
       </button>
     </div>
 
     {/* USER TABLE */}
     <div style={{
-      background: "#111",
-      padding: "20px",
-      borderRadius: "10px",
-      border: "1px solid #222"
-    }}>
+  background: "var(--bg-card)",
+  padding: "20px",
+  borderRadius: "10px",
+  border: "1px solid var(--border)"
+}}>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
-          <tr style={{ textAlign: "left", borderBottom: "1px solid #333" }}>
-            <th style={{ padding: "10px" }}>Email</th>
-            <th style={{ padding: "10px" }}>Role</th>
-            <th style={{ padding: "10px" }}>Action</th>
-          </tr>
-        </thead>
+  <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border)" }}>
+    <th style={{ padding: "10px", width: "60px" }}>#</th>
+    <th style={{ padding: "10px" }}>Name / Email ID</th>
+    <th style={{ padding: "10px" }}>Role</th>
+    <th style={{ padding: "10px" }}>Actions</th>
+  </tr>
+</thead>
+<tbody>
+  {users.map((u, index) => (
+    <tr key={u.email} style={{ borderBottom: "1px solid var(--border)" }}>
 
-        <tbody>
-          {users.map((u) => (
-            <tr key={u.email} style={{ borderBottom: "1px solid #222" }}>
-              
-              <td style={{ padding: "10px" }}>{u.email}</td>
+      {/* Serial Number */}
+      <td style={{ padding: "10px", fontWeight: "600" }}>
+        {index + 1}
+      </td>
 
-              <td style={{ padding: "10px" }}>
-                <span style={{
-                  padding: "4px 10px",
-                  borderRadius: "6px",
-                  background:
-                    u.role === "admin"
-                      ? "#ef4444"
-                      : u.role === "editor"
-                      ? "#3b82f6"
-                      : "#10b981",
-                  fontSize: "12px"
-                }}>
-                  {u.role}
-                </span>
-              </td>
+      {/* Name + Email */}
+      <td style={{ padding: "10px" }}>
+        <div style={{
+          fontWeight: "700",
+          fontSize: "15px",
+          color: "var(--text-main)"
+        }}>
+          {u.name}
+        </div>
 
-              <td style={{ padding: "10px" }}>
-                <button
-                  onClick={async () => {
-                    if (window.confirm("Delete this user?")) {
-                      await deleteUser(u.email);
-                      setUsers(users.filter(user => user.email !== u.email));
-                    }
-                  }}
-                  style={{
-                    background: "transparent",
-                    color: "#ef4444",
-                    border: "none",
-                    cursor: "pointer"
-                  }}
-                >
-                  ❌ Delete
-                </button>
-              </td>
+        <div style={{
+          fontSize: "13px",
+          color: "#9CA3AF",
+          marginTop: "4px"
+        }}>
+          {u.email}
+        </div>
+      </td>
 
-            </tr>
-          ))}
-        </tbody>
+      {/* Role */}
+      <td style={{ padding: "10px" }}>
+        <span
+          style={{
+            padding: "4px 10px",
+            borderRadius: "6px",
+            background: u.role === "admin" ? "#ef4444" : "#10b981",
+            color: "#fff",
+            fontSize: "12px"
+          }}
+        >
+          {u.role}
+        </span>
+      </td>
+
+      {/* Actions */}
+      <td style={{ padding: "10px" }}>
+        <button
+          onClick={() => {
+            setEditUser({
+              name: u.name,
+              email: u.email,
+              password: "",
+              role: u.role
+            });
+            setShowEditModal(true);
+          }}
+          style={{
+            background: "transparent",
+            border: "none",
+            color: "#3B82F6",
+            fontSize: "18px",
+            marginRight: "10px",
+            cursor: "pointer"
+          }}
+        >
+          <MdModeEdit />
+        </button>
+
+        <button
+          onClick={async () => {
+            await deleteUser(u.email);
+            const data = await getUsers();
+            setUsers(data);
+          }}
+          style={{
+            background: "transparent",
+            border: "none",
+            color: "#EF4444",
+            fontSize: "18px",
+            cursor: "pointer"
+          }}
+        >
+          <RiDeleteBin3Fill />
+        </button>
+      </td>
+
+    </tr>
+  ))}
+</tbody>
       </table>
     </div>
 
   </div>
 ) : activeView === "profile" ? (
 
-  <div style={{ padding: "20px", color: "#fff", maxWidth: "400px" }}>
-    <h2>👤 My Profile</h2>
+<div style={{
+  maxWidth: "420px",
+  margin: "40px auto",
+  background: "var(--bg-card)",
+  padding: "25px",
+  borderRadius: "16px",
+  border: "1px solid var(--border)"
+}}>
 
-    <p style={{ marginTop: "10px" }}>
-      <b>Email:</b> {email}
-    </p>
+  <h2 style={{ color: "var(--text-main)", marginBottom: "20px" }}>👤 Profile Settings</h2>
+  {/* NAME */}
+<div style={{ marginBottom: "15px" }}>
+  <label style={labelStyle}>Full Name</label>
+  <input
+    value={profileData.name}
+    onChange={(e) =>
+      setProfileData({ ...profileData, name: e.target.value })
+    }
+    style={inputStyle}
+  />
+</div>
 
+  {/* EMAIL */}
+  <div style={{ marginBottom: "15px" }}>
+    <label style={labelStyle}>Email</label>
+    <input value={email} disabled style={inputStyle} />
+  </div>
+
+  {/* NEW PASSWORD */}
+  <div style={{ marginBottom: "15px" }}>
+    <label style={labelStyle}>New Password</label>
     <input
       type="password"
-      placeholder="New Password"
       value={profileData.newPassword}
       onChange={(e) =>
         setProfileData({ ...profileData, newPassword: e.target.value })
       }
-      style={{ marginTop: "10px", width: "100%", padding: "8px" }}
+      style={inputStyle}
     />
+  </div>
 
+  {/* CONFIRM PASSWORD */}
+  <div style={{ marginBottom: "20px" }}>
+    <label style={labelStyle}>Confirm Password</label>
     <input
       type="password"
-      placeholder="Confirm Password"
       value={profileData.confirmPassword}
       onChange={(e) =>
         setProfileData({ ...profileData, confirmPassword: e.target.value })
       }
-      style={{ marginTop: "10px", width: "100%", padding: "8px" }}
+      style={inputStyle}
     />
+  </div>
 
-    <button
-      style={{ marginTop: "10px" }}
-      onClick={() => {
+  <button
+  onClick={async () => {
+    try {
+      // 👉 name update
+      await updateProfile(email, profileData.name);
+
+      // 👉 password update (optional)
+      if (profileData.newPassword) {
         if (profileData.newPassword !== profileData.confirmPassword) {
           alert("Passwords do not match ❌");
           return;
         }
 
-        alert("Password Updated ✅ (API connect karaycha aahe)");
-      }}
-    >
-      🔑 Update Password
-    </button>
-  </div>
+        await updatePassword(email, profileData.newPassword);
+      }
+
+      localStorage.setItem("userName", profileData.name);
+
+      showNotification("Profile updated successfully ✅", "success");
+
+      setProfileData({
+        name: profileData.name,
+        newPassword: "",
+        confirmPassword: ""
+      });
+
+    } catch (err) {
+      alert(err.message);
+    }
+  }}
+  style={{
+    width: "100%",
+    padding: "12px",
+    borderRadius: "10px",
+    background: "#5D5FEF",
+    color: "#fff",
+    border: "none"
+  }}
+>
+  💾 Save Changes
+</button>
+
+</div>
 ) : activeView === "upload" ? (
 
               
@@ -661,7 +861,7 @@ return (
                                 <th>Size</th>
                                 <th>Knowledge Chunks</th>
                                 <th>Indexed Date</th>
-                                <th style={{ textAlign: 'right' }}>Action</th>
+                                <th style={{ textAlign: 'right' }}>Actions</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -705,7 +905,9 @@ return (
                           {msg.role === 'assistant' ? 'AI' : initials}
                         </div>
                         <div className="msg-content">
-                          <p className="msg-meta">{msg.role === 'assistant' ? 'Phoneme Assistant' : 'Arjun Singh'}</p>
+                          <p className="msg-meta">
+  {msg.role === 'assistant' ? 'Phoneme Assistant' : username}
+</p>
                           <div className={`msg-bubble ${msg.role}`}>
                             {msg.content}
                           </div>
@@ -762,18 +964,18 @@ return (
 {showInviteModal && (
   <div className="modal-overlay">
     <div style={{
-      background: "#111827",
+      background: "var(--bg-card)",
       padding: "28px",
       borderRadius: "16px",
       width: "380px",
-      border: "1px solid #1F2937",
+      border: "1px solid var(--border)",
       boxShadow: "0 20px 40px rgba(0,0,0,0.5)"
     }}>
 
       {/* Header */}
       <div style={{ marginBottom: "20px" }}>
-        <h2 style={{ color: "#fff", margin: 0 }}>Invite User</h2>
-        <p style={{ color: "#9CA3AF", fontSize: "13px" }}>
+        <h2 style={{ color: "var(--text-main)", margin: 0 }}>Create User</h2>
+        <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>
           Add a new user to your workspace
         </p>
       </div>
@@ -851,7 +1053,9 @@ return (
               background: inviteData.role === "user"
                 ? "rgba(93,95,239,0.2)"
                 : "transparent",
-              color: "#fff",
+              color: inviteData.role === "user"
+  ? "#5D5FEF"
+  : "var(--text-main)",
               fontWeight: "600"
             }}
           >
@@ -869,10 +1073,12 @@ return (
               border: inviteData.role === "admin"
                 ? "2px solid #5D5FEF"
                 : "1px solid #2A2F3A",
-              background: inviteData.role === "admin"
-                ? "rgba(93,95,239,0.2)"
-                : "transparent",
-              color: "#fff",
+              background: inviteData.role === "user"
+  ? "rgba(93,95,239,0.15)"
+  : "var(--bg-main)",
+              color: inviteData.role === "admin"
+  ? "#5D5FEF"
+  : "var(--text-main)",
               fontWeight: "600"
             }}
           >
@@ -905,7 +1111,7 @@ return (
               !inviteData.password ||
               !inviteData.confirmPassword
             ) {
-              alert("All fields required ❌");
+              showNotification("All fields are required ❌", "error");
               return;
             }
 
@@ -921,8 +1127,10 @@ return (
                 inviteData.role,
                 inviteData.name
               );
+              const updatedUsers = await getUsers();
+setUsers(updatedUsers);
 
-              alert("User created ✅");
+              showNotification("User created successfully ✅", "success");
               setShowInviteModal(false);
 
             } catch (err) {
@@ -939,10 +1147,144 @@ return (
             fontWeight: "600"
           }}
         >
-          Invite
+          Add user
         </button>
       </div>
 
+    </div>
+  </div>
+)}
+{showEditModal && (
+  <div className="modal-overlay">
+    <div style={{
+      background: "var(--bg-card)",
+      padding: "28px",
+      borderRadius: "16px",
+      width: "380px",
+      border: "1px solid var(--border)",
+      boxShadow: "0 20px 40px rgba(0,0,0,0.5)"
+    }}>
+
+      <h2 style={{ color: "var(--text-main)", marginBottom: "10px" }}>
+        Update User
+      </h2>
+
+      {/* NAME */}
+      <div style={{ marginBottom: "14px" }}>
+        <label style={labelStyle}>Full Name</label>
+        <input
+          value={editUser.name}
+          onChange={(e) =>
+            setEditUser({ ...editUser, name: e.target.value })
+          }
+          style={inputStyle}
+        />
+      </div>
+
+      {/* EMAIL */}
+      <div style={{ marginBottom: "14px" }}>
+        <label style={labelStyle}>Email</label>
+        <input value={editUser.email} disabled style={inputStyle} />
+      </div>
+
+      {/* PASSWORD */}
+      <div style={{ marginBottom: "14px" }}>
+        <label style={labelStyle}>New Password</label>
+        <input
+          type="password"
+          placeholder="Leave blank to keep same password"
+          value={editUser.password}
+          onChange={(e) =>
+            setEditUser({ ...editUser, password: e.target.value })
+          }
+          style={inputStyle}
+        />
+      </div>
+
+      {/* ROLE */}
+      <div style={{ marginBottom: "20px" }}>
+        <label style={labelStyle}>Role</label>
+
+        <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+          <div
+            onClick={() => setEditUser({ ...editUser, role: "user" })}
+            style={{
+              flex: 1,
+              padding: "10px",
+              borderRadius: "10px",
+              textAlign: "center",
+              cursor: "pointer",
+              border: editUser.role === "user"
+                ? "2px solid #5D5FEF"
+                : "1px solid #2A2F3A",
+            }}
+          >
+            👤 User
+          </div>
+
+          <div
+            onClick={() => setEditUser({ ...editUser, role: "admin" })}
+            style={{
+              flex: 1,
+              padding: "10px",
+              borderRadius: "10px",
+              textAlign: "center",
+              cursor: "pointer",
+              border: editUser.role === "admin"
+                ? "2px solid #5D5FEF"
+                : "1px solid #2A2F3A",
+            }}
+          >
+            👨‍💼 Admin
+          </div>
+        </div>
+      </div>
+
+      {/* BUTTONS */}
+      <div style={{ display: "flex", gap: "10px" }}>
+        <button
+          onClick={() => setShowEditModal(false)}
+          style={{
+            flex: 1,
+            background: "transparent",
+            border: "1px solid #2A2F3A",
+            color: "#9CA3AF",
+            padding: "10px",
+            borderRadius: "10px"
+          }}
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={async () => {
+            try {
+              await updateUser(editUser);
+
+              // 🔥 refresh after update
+              const updatedUsers = await getUsers();
+              setUsers(updatedUsers);
+
+              showNotification("User updated successfully ", "success");
+              setShowEditModal(false);
+
+            } catch (err) {
+              showNotification("Update failed ❌", "error");
+            }
+          }}
+          style={{
+            flex: 1,
+            background: "#5D5FEF",
+            border: "none",
+            color: "#fff",
+            padding: "10px",
+            borderRadius: "10px",
+            fontWeight: "600"
+          }}
+        >
+          Save Changes
+        </button>
+      </div>
     </div>
   </div>
 )}

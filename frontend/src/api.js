@@ -92,3 +92,36 @@ export async function getUsers() {
   const res = await fetch(`${API_BASE_URL}/api/admin/users`);
   return parseJson(res);
 }
+export async function updatePassword(email, newPassword) {
+  const res = await fetch(`${API_BASE_URL}/api/change-password`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: email,
+      new_password: newPassword
+    })
+  });
+
+  return parseJson(res);
+}
+export async function updateProfile(email, name) {
+  const res = await fetch(`${API_BASE_URL}/api/update-profile`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: email,
+      name: name
+    })
+  });
+
+  return parseJson(res);
+}
+export async function updateUser(data) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/update-user`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+
+  return parseJson(res);
+}
